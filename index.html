@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Free AI Chat</title>
+  <title>DeepSeek Chat</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -91,7 +91,7 @@
 </head>
 <body>
 
-  <header>Free AI Chat</header>
+  <header>DeepSeek Chat</header>
 
   <div id="chat-box"></div>
 
@@ -101,9 +101,14 @@
   </div>
 
   <script>
+    // Ваш API ключ OpenRouter:
+    const OPENROUTER_API_KEY = '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';
+
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
+
+    const messagesHistory = [];
 
     userInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -126,6 +131,7 @@
       if (!text) return;
 
       appendMessage('user', text);
+      messagesHistory.push({ role: "user", content: text });
       userInput.value = '';
       
       sendBtn.disabled = true;
@@ -134,22 +140,31 @@
       const assistantMsgDiv = appendMessage('assistant', 'Думаю...');
 
       try {
-        // Кодируем текст для безопасной передачи в URL
-        const encodedPrompt = encodeURIComponent(text);
-        
-        // Надежный GET-запрос к Pollinations
-        const response = await fetch(`https://text.pollinations.ai/${encodedPrompt}?model=mistral`);
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            model: 'deepseek/deepseek-r1:free',messages: messagesHistory
+          })
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP Error: ${response.status}`);
         }
 
-        const reply = await response.text();
+        const data = await response.json();
+        const reply = data.choices[0].message.content;
+        
         assistantMsgDiv.textContent = reply;
+        messagesHistory.push({ role: "assistant", content: reply });
 
       } catch (err) {
         assistantMsgDiv.classList.remove('assistant');
-        assistantMsgDiv.classList.add('system-error');assistantMsgDiv.textContent = `Ошибка: Не удалось получить ответ (${err.message})`;
+        assistantMsgDiv.classList.add('system-error');
+        assistantMsgDiv.textContent = `Ошибка: Не удалось получить ответ (${err.message})`;
       } finally {
         sendBtn.disabled = false;
         userInput.disabled = false;
