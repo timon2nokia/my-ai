@@ -91,7 +91,7 @@
 </head>
 <body>
 
-  <header>Free AI Chat (Без ключей)</header>
+  <header>Free AI Chat</header>
 
   <div id="chat-box"></div>
 
@@ -104,8 +104,6 @@
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
-
-    const messagesHistory = [];
 
     userInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -128,7 +126,6 @@
       if (!text) return;
 
       appendMessage('user', text);
-      messagesHistory.push({ role: "user", content: text });
       userInput.value = '';
       
       sendBtn.disabled = true;
@@ -137,27 +134,22 @@
       const assistantMsgDiv = appendMessage('assistant', 'Думаю...');
 
       try {
-        const response = await fetch('https://text.pollinations.ai/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: messagesHistory,
-            model: 'mistral',
-            seed: Math.floor(Math.random() * 1000000)
-          })
-        });
+        // Кодируем текст для безопасной передачи в URL
+        const encodedPrompt = encodeURIComponent(text);
+        
+        // Надежный GET-запрос к Pollinations
+        const response = await fetch(`https://text.pollinations.ai/${encodedPrompt}?model=mistral`);
 
         if (!response.ok) {
           throw new Error(`HTTP Error: ${response.status}`);
         }
 
-        const reply = await response.text();assistantMsgDiv.textContent = reply;
-        messagesHistory.push({ role: "assistant", content: reply });
+        const reply = await response.text();
+        assistantMsgDiv.textContent = reply;
 
       } catch (err) {
         assistantMsgDiv.classList.remove('assistant');
-        assistantMsgDiv.classList.add('system-error');
-        assistantMsgDiv.textContent = `Ошибка: Не удалось получить ответ (${err.message})`;
+        assistantMsgDiv.classList.add('system-error');assistantMsgDiv.textContent = `Ошибка: Не удалось получить ответ (${err.message})`;
       } finally {
         sendBtn.disabled = false;
         userInput.disabled = false;
