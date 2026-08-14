@@ -142,7 +142,8 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             messages: messagesHistory,
-            model: 'openai'
+            model: 'mistral',
+            seed: Math.floor(Math.random() * 1000000)
           })
         });
 
@@ -150,9 +151,8 @@
           throw new Error(`HTTP Error: ${response.status}`);
         }
 
-        const reply = await response.text();
-        
-        assistantMsgDiv.textContent = reply;messagesHistory.push({ role: "assistant", content: reply });
+        const reply = await response.text();assistantMsgDiv.textContent = reply;
+        messagesHistory.push({ role: "assistant", content: reply });
 
       } catch (err) {
         assistantMsgDiv.classList.remove('assistant');
