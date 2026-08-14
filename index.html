@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DeepSeek Chat</title>
+  <title>DeepSeek AI Chat</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -15,12 +15,25 @@
       height: 100vh;
     }
     header {
-      padding: 15px 20px;
+      padding: 12px 20px;
       background-color: #2d2d2d;
       border-bottom: 1px solid #3d3d3d;
-      font-weight: bold;
-      font-size: 1.1rem;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .key-bar {
+      display: flex;
+      gap: 8px;
+    }
+    .key-bar input {
+      background-color: #1a1a1a;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      width: 220px;
     }
     #chat-box {
       flex: 1;
@@ -38,23 +51,9 @@
       white-space: pre-wrap;
       word-wrap: break-word;
     }
-    .user {
-      align-self: flex-end;
-      background-color: #0078d4;
-      color: #fff;
-    }
-    .assistant {
-      align-self: flex-start;
-      background-color: #2d2d2d;
-      border: 1px solid #3d3d3d;
-      color: #ececec;
-    }
-    .system-error {
-      align-self: center;
-      background-color: #5a1d1d;
-      color: #ff8888;
-      font-size: 0.9rem;
-    }
+    .user { align-self: flex-end; background-color: #0078d4; color: #fff; }
+    .assistant { align-self: flex-start; background-color: #2d2d2d; border: 1px solid #3d3d3d; }
+    .system-error { align-self: center; background-color: #5a1d1d; color: #ff8888; font-size: 0.9rem; }
     #input-container {
       padding: 15px;
       background-color: #2d2d2d;
@@ -74,7 +73,6 @@
       outline: none;
       height: 48px;
     }
-    textarea:focus { border-color: #0078d4; }
     button {
       background-color: #0078d4;
       color: #fff;
@@ -83,15 +81,19 @@
       padding: 0 20px;
       font-weight: bold;
       cursor: pointer;
-      transition: background 0.2s;
     }
-    button:hover { background-color: #005a9e; }
     button:disabled { background-color: #444; cursor: not-allowed; }
   </style>
 </head>
 <body>
 
-  <header>DeepSeek Chat</header>
+  <header>
+    <span>DeepSeek R1 Chat</span>
+    <div class="key-bar">
+      <input type="password" id="api-key-input" placeholder="Вставьте OpenRouter API Key">
+      <button onclick="saveKey()" style="padding: 0 10px; font-size: 0.8rem;">Сохранить</button>
+    </div>
+  </header>
 
   <div id="chat-box"></div>
 
@@ -101,12 +103,20 @@
   </div>
 
   <script>
-    // Ваш API ключ OpenRouter:
-    const OPENROUTER_API_KEY = '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';
-
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
+    const apiKeyInput = document.getElementById('api-key-input');
+
+    // Загружаем сохраненный ключ
+    let apiKey = localStorage.getItem('openrouter_key') || '';
+    if (apiKey) apiKeyInput.value = apiKey;
+
+    function saveKey() {
+      apiKey = apiKeyInput.value.trim();
+      localStorage.setItem('openrouter_key', apiKey);
+      alert('Ключ сохранен в вашем браузере!');
+    }
 
     const messagesHistory = [];
 
@@ -127,8 +137,12 @@
     }
 
     async function sendMessage() {
-      const text = userInput.value.trim();
-      if (!text) return;
+      if (!apiKey) {
+        alert('Пожалуйста, введите ваш API ключ OpenRouter вверху справа!');
+        return;
+      }
+
+      const text = userInput.value.trim();if (!text) return;
 
       appendMessage('user', text);
       messagesHistory.push({ role: "user", content: text });
@@ -143,17 +157,16 @@
         const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+            'Authorization': `Bearer ${apiKey}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            model: 'deepseek/deepseek-r1:free',messages: messagesHistory
+            model: 'deepseek/deepseek-r1:free',
+            messages: messagesHistory
           })
         });
 
-        if (!response.ok) {
-          throw new Error(`HTTP Error: ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
         const data = await response.json();
         const reply = data.choices[0].message.content;
@@ -164,7 +177,7 @@
       } catch (err) {
         assistantMsgDiv.classList.remove('assistant');
         assistantMsgDiv.classList.add('system-error');
-        assistantMsgDiv.textContent = `Ошибка: Не удалось получить ответ (${err.message})`;
+        assistantMsgDiv.textContent = `Ошибка: (${err.message}). Проверьте ключ.`;
       } finally {
         sendBtn.disabled = false;
         userInput.disabled = false;
